@@ -1,6 +1,6 @@
 # 🎧 MusicProject — Spotify Style (MERN + Deezer API)
 
-MusicProject es una aplicación Full Stack inspirada en Spotify, donde los usuarios pueden explorar canciones, reproducir previews y crear playlists personalizadas.
+MusicProject es una aplicación **Full Stack** inspirada en Spotify, donde los usuarios pueden **explorar canciones, reproducir previews** y **crear playlists personalizadas**.
 
 > Proyecto pensado para portfolio: repositorio público, estructura clara y funcionalidades esenciales.
 
@@ -32,74 +32,87 @@ MusicProject es una aplicación Full Stack inspirada en Spotify, donde los usuar
 
 ## 🧠 Estructura del proyecto
 
-```txt
-musicproject/
-├── backend/
-└── frontend/
+- `backend/` → API REST (Node + Express + MongoDB)
+- `frontend/` → UI (React + Tailwind)
 
-⚙️ Backend (Node + Express + MongoDB)
-📌 Rutas principales (API REST)
-👤 Users / Auth
-POST /users/register → Registro + crea playlist “Favoritos”
+---
 
-POST /users/login → Login + devuelve token + favoritePlaylistId
+## ⚙️ Backend (Node + Express + MongoDB)
 
-🎶 Songs
-GET /songs → Todas las canciones locales
+### 📌 Rutas principales (API REST)
 
-GET /songs/:songId → Canción por ID
+#### 👤 Users / Auth
+- `POST /users/register` → Registro + crea playlist “Favoritos”
+- `POST /users/login` → Login + devuelve token + `favoritePlaylistId`
 
-GET /songs/genre/:genreId → Canciones por género
+#### 🎶 Songs
+- `GET /songs` → Todas las canciones locales
+- `GET /songs/:songId` → Canción por ID
+- `GET /songs/genre/:genreId` → Canciones por género
+- `GET /songs/fetch-audio/:songId` → Busca preview en Deezer y actualiza la canción
+- `POST /songs/from-deezer` → Guarda canción Deezer en Mongo si aún no existe
 
-GET /songs/fetch-audio/:songId → Busca preview en Deezer y actualiza la canción
+#### 📚 Playlists
+- `GET /playlists/user/:userId` → Playlists del usuario
+- `GET /playlists/:playlistId` → Playlist por ID
+- `POST /playlists` → Crear playlist
+- `PUT /playlists/:playlistId` → Renombrar / actualizar datos
+- `PUT /playlists/:playlistId/add-song` → Añadir canción
+- `PUT /playlists/:playlistId/remove-song` → Remover canción
+- `DELETE /playlists/:playlistId` → Eliminar playlist
 
-POST /songs/from-deezer → Guarda canción Deezer en Mongo si aún no existe
+#### 🌍 Deezer
+- `GET /deezer/search` (o ruta equivalente) → Combina canciones de chart/search y devuelve tracks con preview
 
-📚 Playlists
-GET /playlists/user/:userId → Playlists del usuario
+---
 
-GET /playlists/:playlistId → Playlist por ID
+## 🧩 Arquitectura
 
-POST /playlists → Crear playlist
+- **Controllers:** reciben request/response y delegan lógica
+- **Services:** lógica de negocio + acceso a DB
+- **Models:** esquemas MongoDB (User, Song, Playlist)
+- **Middleware:** validación JWT para rutas privadas
 
-PUT /playlists/:playlistId → Renombrar / actualizar datos
+---
 
-PUT /playlists/:playlistId/add-song → Añadir canción
+## 🎨 Frontend (React + Tailwind)
 
-PUT /playlists/:playlistId/remove-song → Remover canción
+### Páginas principales
+- **Landing**
+- **Register / Login** (mini mensajes UI integrados)
+- **Home** (biblioteca + playlist activa + reproductor)
+- **ExplorePage** (canciones Deezer + canciones locales)
 
-DELETE /playlists/:playlistId → Eliminar playlist
+### 🎧 Player
+Reproductor centralizado con `PlayerContext`:
+- Play / Pause / Resume / Stop
+- Manejo de preview inválida
+- Fallback automático: si una canción local no tiene preview → consulta `GET /songs/fetch-audio/:songId`
 
-🌍 Deezer
-GET /deezer/search (o ruta equivalente) → Combina canciones de chart/search y devuelve tracks con preview
+---
 
-🧩 Arquitectura
-Controllers: reciben request/response y delegan lógica
+## 🖼️ Screenshots
 
-Services: lógica de negocio + acceso a DB
+> Agregá tus capturas dentro de `/frontend/screenshots/` y luego linkealas así:
 
-Models: esquemas MongoDB (User, Song, Playlist)
+- Landing  
+  `![Landing](frontend/screenshots/landing.png)`
 
-Middleware: validación JWT para rutas privadas
+- Home / Biblioteca  
+  `![Home](frontend/screenshots/home.png)`
 
-🎨 Frontend (React + Tailwind)
-Páginas principales
-Landing
+- Explorar canciones  
+  `![Explore](frontend/screenshots/explore.png)`
 
-Register / Login (mini mensajes UI integrados)
+- Login / Register  
+  `![Login](frontend/screenshots/login.png)`  
+  `![Register](frontend/screenshots/register.png)`
 
-Home (biblioteca + playlist activa + reproductor)
+---
 
-ExplorePage (canciones Deezer + canciones locales)
+## ✅ Estado del proyecto
 
-🎧 Player
-Reproductor centralizado con PlayerContext:
+📌 **Finalizado** — proyecto de portfolio para LinkedIn / GitHub.
 
-Play / Pause / Resume / Stop
 
-Manejo de preview inválida
 
-Fallback automático: si una canción local no tiene preview → consulta GET /songs/fetch-audio/:songId
-
-✅ Estado del proyecto
-📌 Finalizado — proyecto de portfolio para LinkedIn / GitHub.
