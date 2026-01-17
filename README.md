@@ -93,20 +93,21 @@ Reproductor centralizado con `PlayerContext`:
 
 ## 🖼️ Screenshots
 
-> Agregá tus capturas dentro de `/frontend/screenshots/` y luego linkealas así:
+### Landing
+![Landing](frontend/public/Screenshots/landing.png)
 
-- Landing  
-  `![Landing](frontend/screenshots/landing.png)`
+### Home / Biblioteca
+![Home](frontend/public/Screenshots/home.png)
 
-- Home / Biblioteca  
-  `![Home](frontend/screenshots/home.png)`
+### Explorar canciones
+![Explore](frontend/public/Screenshots/explore.png)
 
-- Explorar canciones  
-  `![Explore](frontend/screenshots/explore.png)`
+### Login
+![Login](frontend/public/Screenshots/login.png)
 
-- Login / Register  
-  `![Login](frontend/screenshots/login.png)`  
-  `![Register](frontend/screenshots/register.png)`
+### Register
+![Register](frontend/public/Screenshots/register.png)
+
 
 ---
 
