@@ -5,13 +5,13 @@ import Candado from "../../assets/images/Candado.svg";
 import Logo from "../../assets/images/Logo.svg";
 import useAuth from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { saveToken } = useAuth();
 
-  const [FormData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
@@ -22,37 +22,45 @@ const LoginPage = () => {
     text: "",
   });
 
+  const timerRef = useRef(null);
+
   const showMessage = (type, text) => {
     setUiMessage({ show: true, type, text });
-    setTimeout(() => setUiMessage((p) => ({ ...p, show: false })), 2600);
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    timerRef.current = setTimeout(() => {
+      setUiMessage((p) => ({ ...p, show: false }));
+    }, 2600);
   };
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const handleChange = (e) => {
-    setFormData({
-      ...FormData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    //Validación mínima
-    if (!FormData.email || !FormData.password) {
+    if (!formData.email || !formData.password) {
       showMessage("warning", "Completá tu email y contraseña para ingresar.");
       return;
     }
 
     try {
-      const res = await axios.post("http://localhost:4000/users/login", FormData);
+      const res = await axios.post("http://localhost:4000/users/login", formData);
 
-      // Guardar todo en localStorage
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("favoritePlaylistId", res.data.favoritePlaylistId);
       localStorage.setItem("userId", res.data.user.id);
       localStorage.setItem("username", res.data.user.username);
 
-      // Reset UX playlist activa
       localStorage.removeItem("activePlaylistId");
       localStorage.removeItem("activePlaylistName");
 
@@ -65,8 +73,7 @@ const LoginPage = () => {
       }, 700);
     } catch (error) {
       const msg =
-        error.response?.data?.message ||
-        "Email o contraseña incorrectos.";
+        error.response?.data?.message || "Email o contraseña incorrectos.";
 
       showMessage("error", msg);
     }
@@ -90,7 +97,11 @@ const LoginPage = () => {
           <span className="text-mpPurpleSoft ml-2">Project</span>
         </h1>
 
-        <img src={Logo} alt="Logo-login" className="w-11 h-11 ml-3 rounded-full" />
+        <img
+          src={Logo}
+          alt="Logo-login"
+          className="w-11 h-11 ml-3 rounded-full"
+        />
       </div>
 
       <div
@@ -140,9 +151,14 @@ const LoginPage = () => {
               focus-within:bg-white/10
             "
           >
-            <img src={Mail} alt="emailIcon" className="w-6 h-6 mr-4 opacity-70" />
+            <img
+              src={Mail}
+              alt="emailIcon"
+              className="w-6 h-6 mr-4 opacity-70"
+            />
             <input
               onChange={handleChange}
+              value={formData.email}
               type="email"
               name="email"
               placeholder="Correo electrónico"
@@ -165,9 +181,14 @@ const LoginPage = () => {
               focus-within:bg-white/10
             "
           >
-            <img src={Candado} alt="passwordIcon" className="w-6 h-6 mr-4 opacity-70" />
+            <img
+              src={Candado}
+              alt="passwordIcon"
+              className="w-6 h-6 mr-4 opacity-70"
+            />
             <input
               onChange={handleChange}
+              value={formData.password}
               type="password"
               name="password"
               placeholder="Contraseña"

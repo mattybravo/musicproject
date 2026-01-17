@@ -1,26 +1,24 @@
 // Imports
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import axios from "axios";
 import GetAllSongs from "../../api/GetAllSongs";
 import GetSongsByGenreOnDeezer from "../../api/GetSongsByGenreOnDeezer";
 import AddSongToFavorites from "../../api/AddSongToFavorites";
 import SongCard from "../../components/Music/SongCard";
 import { usePlayer } from "../../context/PlayerContext";
-import axios from "axios";
 import GetPlaylistById from "../../api/GetPlaylistById";
 
 const ExplorePage = () => {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // UX: si no hay playlist activa válida, bloqueamos
   const [canAddSongs, setCanAddSongs] = useState(true);
   const [playlistName, setPlaylistName] = useState("");
 
-  // ✅ UI feedback (reemplazo de alerts)
   const [uiMessage, setUiMessage] = useState({
     show: false,
-    type: "info", // info | success | warning | error
+    type: "info",
     title: "",
     text: "",
     actionLabel: "",
@@ -32,11 +30,11 @@ const ExplorePage = () => {
 
   const token = localStorage.getItem("token");
 
-  const storedPlaylistId =
+  const getStoredPlaylistId = () =>
     localStorage.getItem("activePlaylistId") ||
     localStorage.getItem("favoritePlaylistId");
 
-  const showMessage = (payload) => {
+  const showMessage = useCallback((payload) => {
     setUiMessage({
       show: true,
       type: payload.type || "info",
@@ -45,14 +43,16 @@ const ExplorePage = () => {
       actionLabel: payload.actionLabel || "",
       onAction: payload.onAction || null,
     });
-  };
+  }, []);
 
-  const hideMessage = () => {
+  const hideMessage = useCallback(() => {
     setUiMessage((prev) => ({ ...prev, show: false }));
-  };
+  }, []);
 
   useEffect(() => {
-    const validateActivePlaylist = async () => {
+    const validate = async () => {
+      const storedPlaylistId = getStoredPlaylistId();
+
       if (!token) {
         setCanAddSongs(false);
         setPlaylistName("");
@@ -89,7 +89,7 @@ const ExplorePage = () => {
         localStorage.setItem("activePlaylistName", playlist.name);
 
         hideMessage();
-      } catch (err) {
+      } catch {
         localStorage.removeItem("activePlaylistId");
         localStorage.removeItem("activePlaylistName");
 
@@ -106,27 +106,23 @@ const ExplorePage = () => {
       }
     };
 
-    validateActivePlaylist();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, storedPlaylistId]);
+    validate();
+  }, [token, navigate, showMessage, hideMessage]);
 
   useEffect(() => {
     const loadSongs = async () => {
       try {
-        const localSongs = await GetAllSongs();
-        const deezerSongsRaw = await GetSongsByGenreOnDeezer();
+        const [localSongs, deezerSongsRaw] = await Promise.all([
+          GetAllSongs(),
+          GetSongsByGenreOnDeezer(),
+        ]);
 
         const deezerSongs = Array.from(
           new Map(deezerSongsRaw.map((s) => [s.deezerId, s])).values()
-        );
+        ).slice(0, 5);
 
-        // ✅ mantenemos deezer limitado para UX
-        const deezerLimited = deezerSongs.slice(0, 5);
-
-        // ✅ traemos TODAS las canciones locales
-        setSongs([...deezerLimited, ...localSongs]);
-      } catch (error) {
-        console.error("Error cargando canciones:", error);
+        setSongs([...deezerSongs, ...localSongs]);
+      } catch {
         showMessage({
           type: "error",
           title: "Error cargando canciones",
@@ -138,46 +134,41 @@ const ExplorePage = () => {
     };
 
     loadSongs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [showMessage]);
 
-  // ✅ PLAY inteligente en Explore (igual HOME)
   const handlePlayExplore = async (song) => {
     try {
-      // Deezer track (no tiene _id) -> reproducir directo si tiene preview
+      const hasPreview =
+        typeof song?.preview === "string" && song.preview.startsWith("http");
+
       if (!song?._id) {
-        if (song?.preview && typeof song.preview === "string" && song.preview.startsWith("http")) {
-          playSong(song);
-        }
+        if (hasPreview) playSong(song);
         return;
       }
 
-      // Canción local con preview
-      if (song?.preview && typeof song.preview === "string" && song.preview.startsWith("http")) {
+      if (hasPreview) {
         playSong(song);
         return;
       }
 
-      // Canción local sin preview -> pedir al back que lo complete
-      const token = localStorage.getItem("token");
-      if (!token) return;
+      const t = localStorage.getItem("token");
+      if (!t) return;
 
       const res = await axios.get(
         `http://localhost:4000/songs/fetch-audio/${song._id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${t}` } }
       );
 
       const updatedSong = res.data?.song;
       if (!updatedSong?.preview) return;
 
-      // actualizar en pantalla
       setSongs((prev) =>
         prev.map((s) => (s._id === updatedSong._id ? updatedSong : s))
       );
 
       playSong(updatedSong);
-    } catch (error) {
-      console.error("Error intentando reproducir canción:", error);
+    } catch {
+      // silencioso (no rompe UX)
     }
   };
 
@@ -205,9 +196,7 @@ const ExplorePage = () => {
         return;
       }
 
-      const playlistId =
-        localStorage.getItem("activePlaylistId") ||
-        localStorage.getItem("favoritePlaylistId");
+      const playlistId = getStoredPlaylistId();
 
       if (!playlistId) {
         showMessage({
@@ -222,11 +211,12 @@ const ExplorePage = () => {
 
       let songId = song._id;
 
-      // Deezer → DB
       if (!songId && song.deezerId) {
-        const res = await axios.post("http://localhost:4000/songs/from-deezer", song, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.post(
+          "http://localhost:4000/songs/from-deezer",
+          song,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         songId = res.data._id;
       }
 
@@ -240,10 +230,8 @@ const ExplorePage = () => {
         text: `Se añadió correctamente a "${name}".`,
       });
 
-      setTimeout(() => hideMessage(), 2600);
-    } catch (error) {
-      console.error("Error al añadir:", error);
-
+      setTimeout(hideMessage, 2600);
+    } catch {
       showMessage({
         type: "error",
         title: "No se pudo agregar",
@@ -276,7 +264,6 @@ const ExplorePage = () => {
   return (
     <section className="bg-mpDeep min-h-screen px-10 py-10">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="flex items-start justify-between gap-6 mb-6">
           <div>
             <h2 className="text-white text-3xl font-semibold tracking-tight">
@@ -303,7 +290,6 @@ const ExplorePage = () => {
           </button>
         </div>
 
-        {/* ✅ UI message banner */}
         {uiMessage.show && (
           <div
             className={`
@@ -351,7 +337,6 @@ const ExplorePage = () => {
           </div>
         )}
 
-        {/* Playlist active info */}
         <div className="mb-8 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5">
           {canAddSongs ? (
             <p className="text-white/60 text-[13px] font-mont">

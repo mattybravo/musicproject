@@ -13,7 +13,6 @@ import axios from "axios";
 
 const HomeLoginPage = () => {
   const navigate = useNavigate();
-
   const { playSong, stopSong, currentSong } = usePlayer();
 
   const [activePlaylistId, setActivePlaylistId] = useState(null);
@@ -35,14 +34,14 @@ const HomeLoginPage = () => {
 
   const handleSelectPlaylist = useCallback(
     async (playlistId) => {
+      const token = localStorage.getItem("token");
+
+      if (!playlistId || !token) {
+        clearActivePlaylist();
+        return;
+      }
+
       try {
-        const token = localStorage.getItem("token");
-
-        if (!playlistId || !token) {
-          clearActivePlaylist();
-          return;
-        }
-
         const playlist = await GetPlaylistById(playlistId, token);
 
         setActivePlaylistId(playlist._id);
@@ -53,8 +52,7 @@ const HomeLoginPage = () => {
         localStorage.setItem("activePlaylistName", playlist.name);
 
         stopSong();
-      } catch (error) {
-        console.error("Error cargando playlist:", error);
+      } catch {
         clearActivePlaylist();
       }
     },
@@ -70,26 +68,30 @@ const HomeLoginPage = () => {
 
     if (lastPlaylistId) {
       handleSelectPlaylist(lastPlaylistId);
-    } else if (favId) {
-      handleSelectPlaylist(favId);
-    } else {
-      clearActivePlaylist();
+      return;
     }
+
+    if (favId) {
+      handleSelectPlaylist(favId);
+      return;
+    }
+
+    clearActivePlaylist();
   }, [handleSelectPlaylist, clearActivePlaylist]);
 
   useEffect(() => {
     if (!currentSong) return;
 
     const stillExists = songs.some((s) => s._id === currentSong._id);
-    if (!stillExists) {
-      stopSong();
-    }
+    if (!stillExists) stopSong();
   }, [songs, currentSong, stopSong]);
 
   const handlePlayFromHome = async (song) => {
     try {
-    
-      if (song?.preview && typeof song.preview === "string" && song.preview.startsWith("http")) {
+      const hasPreview =
+        typeof song?.preview === "string" && song.preview.startsWith("http");
+
+      if (hasPreview) {
         playSong(song);
         return;
       }
@@ -103,19 +105,15 @@ const HomeLoginPage = () => {
       );
 
       const updatedSong = res.data?.song;
-
-      if (!updatedSong?.preview) {
-        console.warn("⛔ Canción sigue sin preview después de fetch-audio:", updatedSong);
-        return;
-      }
+      if (!updatedSong?.preview) return;
 
       setSongs((prev) =>
         prev.map((s) => (s._id === updatedSong._id ? updatedSong : s))
       );
 
       playSong(updatedSong);
-    } catch (error) {
-      console.error("Error intentando reproducir canción:", error);
+    } catch {
+      
     }
   };
 
@@ -129,18 +127,14 @@ const HomeLoginPage = () => {
       setSongs((prev) => {
         const updated = prev.filter((s) => s._id !== songId);
 
-        if (currentSong?._id === songId) {
-          stopSong();
-        }
-
-        if (updated.length === 0) {
+        if (currentSong?._id === songId || updated.length === 0) {
           stopSong();
         }
 
         return updated;
       });
-    } catch (error) {
-      console.error("Error al eliminar canción:", error);
+    } catch {
+      
     }
   };
 
@@ -155,7 +149,6 @@ const HomeLoginPage = () => {
         />
 
         <main className="flex-1 px-10 pt-10 pb-10">
-
           <div className="w-full flex justify-center mb-10">
             <MusicPlayer />
           </div>
@@ -198,22 +191,23 @@ const HomeLoginPage = () => {
               {songs.map((song) => (
                 <div
                   key={song._id}
-                  className = "p-4 rounded-2xl flex justify-between items-center border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl shadow-black/25"
+                  className="p-4 rounded-2xl flex justify-between items-center border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl shadow-black/25"
                 >
                   <div
-                    className = "flex gap-4 items-center cursor-pointer"
+                    className="flex gap-4 items-center cursor-pointer"
                     onClick={() => handlePlayFromHome(song)}
                   >
                     <img
                       src={song.imageUrl}
                       alt={song.title}
-                      className = "w-14 h-14 rounded-xl object-cover"
+                      className="w-14 h-14 rounded-xl object-cover"
                     />
 
                     <div className="min-w-0">
                       <h3 className="text-white font-bold truncate max-w-[420px]">
                         {song.title}
                       </h3>
+
                       <p className="text-mpPinkLight text-sm truncate max-w-[420px]">
                         {song.artist}
                       </p>

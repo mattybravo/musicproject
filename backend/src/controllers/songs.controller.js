@@ -80,10 +80,10 @@ exports.createSongFromDeezer = async (req, res) => {
         realPreview = deezerPreview.trim();
       }
     } catch (_) {
-      // sin acción (fallback abajo)
+      //(fallback abajo)
     }
 
-    // 2) Fallback al preview recibido si es válido
+    //Fallback al preview recibido si es válido
     if (!realPreview && typeof preview === "string" && preview.trim() !== "") {
       const candidate = preview.trim();
       if (!isBlockedPreview(candidate)) {
@@ -91,7 +91,7 @@ exports.createSongFromDeezer = async (req, res) => {
       }
     }
 
-    // 3) Si sigue bloqueado o inválido -> guardar vacío (NO cortar el add)
+    //Si sigue bloqueado o inválido -> guardar vacío (NO cortar el add)
     if (!realPreview || isBlockedPreview(realPreview)) {
       realPreview = "";
     }

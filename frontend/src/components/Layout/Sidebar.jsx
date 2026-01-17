@@ -1,4 +1,5 @@
 // Imports
+import { useEffect, useState, useCallback, useMemo } from "react";
 import SignoMas2 from "../../assets/images/SignoMas2.svg";
 import Editar from "../../assets/images/Editar.svg";
 import Eliminar from "../../assets/images/Eliminar.svg";
@@ -6,38 +7,34 @@ import GetUserPlaylists from "../../api/GetUserPlaylists";
 import CreatePlaylist from "../../api/CreatePlaylist";
 import DeletePlaylist from "../../api/DeletePlaylist";
 import UpdatePlaylist from "../../api/UpdatePlaylist";
-import { useEffect, useState, useCallback } from "react";
 
 const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
   const [playlists, setPlaylists] = useState([]);
 
   const [modal, setModal] = useState({
     open: false,
-    type: "", // "create" | "rename" | "delete"
+    type: "", // create | rename | delete
     playlistId: null,
     currentName: "",
   });
 
   const [text, setText] = useState("");
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setModal({ open: false, type: "", playlistId: null, currentName: "" });
     setText("");
-  };
+  }, []);
 
   const loadPlaylists = useCallback(async () => {
+    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
+    if (!userId || !token) return;
+
     try {
-      const userId = localStorage.getItem("userId");
-      const token = localStorage.getItem("token");
-
-      if (!userId || !token) return;
-
       const data = await GetUserPlaylists(userId, token);
-
-      const filtered = data.filter((p) => p.name !== "Favoritos");
-      setPlaylists(filtered);
-    } catch (error) {
-      console.error("Error cargando playlists:", error);
+      setPlaylists(data.filter((p) => p.name !== "Favoritos"));
+    } catch {
+      // silencioso (para repo público)
     }
   }, []);
 
@@ -45,25 +42,25 @@ const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
     loadPlaylists();
   }, [loadPlaylists]);
 
-  const handleCreatePlaylist = () => {
+  const openCreate = () => {
     setText("");
     setModal({ open: true, type: "create", playlistId: null, currentName: "" });
   };
 
-  const handleRenamePlaylist = (playlistId, currentName) => {
+  const openRename = (playlistId, currentName) => {
     setText(currentName);
     setModal({ open: true, type: "rename", playlistId, currentName });
   };
 
-  const handleDeletePlaylist = (playlistId, currentName) => {
+  const openDelete = (playlistId, currentName) => {
     setModal({ open: true, type: "delete", playlistId, currentName });
   };
 
   const handleConfirm = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
+    try {
       if (modal.type === "create") {
         const name = text.trim();
         if (!name) return;
@@ -78,27 +75,21 @@ const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
 
       if (modal.type === "delete") {
         await DeletePlaylist(modal.playlistId, token);
-
-        // si borrás la activa, limpiamos selección desde HomeLoginPage
-        if (activePlaylistId === modal.playlistId) {
-          onSelectPlaylist(null);
-        }
+        if (activePlaylistId === modal.playlistId) onSelectPlaylist(null);
       }
 
       await loadPlaylists();
       closeModal();
-    } catch (error) {
-      console.error("Error en acción:", error);
-      // opcional: podrías mostrar un mensaje en modal si querés
+    } catch {
+      // silencioso
     }
   };
 
-  const modalTitle =
-    modal.type === "delete"
-      ? "Eliminar playlist"
-      : modal.type === "rename"
-      ? "Editar playlist"
-      : "Nueva playlist";
+  const modalTitle = useMemo(() => {
+    if (modal.type === "delete") return "Eliminar playlist";
+    if (modal.type === "rename") return "Editar playlist";
+    return "Nueva playlist";
+  }, [modal.type]);
 
   return (
     <>
@@ -148,7 +139,9 @@ const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
                       pr-3
                     "
                   >
-                    <span className={`block truncate ${isActive ? "text-white font-semibold" : ""}`}>
+                    <span
+                      className={`block truncate ${isActive ? "text-white font-semibold" : ""}`}
+                    >
                       {pl.name}
                     </span>
                   </button>
@@ -156,20 +149,28 @@ const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
                   <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition">
                     <button
                       type="button"
-                      onClick={() => handleRenamePlaylist(pl._id, pl.name)}
+                      onClick={() => openRename(pl._id, pl.name)}
                       className="opacity-80 hover:opacity-100 transition"
                       title="Editar nombre"
                     >
-                      <img src={Editar} alt="Editar" className="w-[18px] h-[18px]" />
+                      <img
+                        src={Editar}
+                        alt="Editar"
+                        className="w-[18px] h-[18px]"
+                      />
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => handleDeletePlaylist(pl._id, pl.name)}
+                      onClick={() => openDelete(pl._id, pl.name)}
                       className="opacity-80 hover:opacity-100 transition"
                       title="Eliminar playlist"
                     >
-                      <img src={Eliminar} alt="Eliminar" className="w-[18px] h-[18px]" />
+                      <img
+                        src={Eliminar}
+                        alt="Eliminar"
+                        className="w-[18px] h-[18px]"
+                      />
                     </button>
                   </div>
                 </div>
@@ -179,7 +180,7 @@ const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
         </div>
 
         <button
-          onClick={handleCreatePlaylist}
+          onClick={openCreate}
           className="
             mt-10 w-full
             flex items-center justify-center gap-3
@@ -193,7 +194,11 @@ const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
             transition
           "
         >
-          <img src={SignoMas2} className="w-5 h-5 opacity-90" alt="Nueva playlist" />
+          <img
+            src={SignoMas2}
+            className="w-5 h-5 opacity-90"
+            alt="Nueva playlist"
+          />
           Nueva playlist
         </button>
       </aside>
@@ -275,10 +280,18 @@ const SideBar = ({ onSelectPlaylist, activePlaylistId }) => {
                   px-4 py-2 rounded-full
                   text-white text-[13px] font-mont font-semibold
                   transition
-                  ${modal.type === "delete" ? "bg-mpHotPink/90 hover:opacity-95" : "bg-mpPurple hover:opacity-95"}
+                  ${
+                    modal.type === "delete"
+                      ? "bg-mpHotPink/90 hover:opacity-95"
+                      : "bg-mpPurple hover:opacity-95"
+                  }
                 `}
               >
-                {modal.type === "delete" ? "Eliminar" : modal.type === "rename" ? "Guardar" : "Crear"}
+                {modal.type === "delete"
+                  ? "Eliminar"
+                  : modal.type === "rename"
+                  ? "Guardar"
+                  : "Crear"}
               </button>
             </div>
           </div>

@@ -2,7 +2,7 @@
 import axios from "axios";
 import useAuth from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Logo from "../../assets/images/Logo.svg";
 import User from "../../assets/images/User.svg";
 import Mail from "../../assets/images/Mail.svg";
@@ -12,7 +12,7 @@ const RegisterPage = () => {
   const navigate = useNavigate();
   const { saveToken } = useAuth();
 
-  const [FormData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
@@ -24,38 +24,44 @@ const RegisterPage = () => {
     text: "",
   });
 
+  const timerRef = useRef(null);
+
   const showMessage = (type, text) => {
     setUiMessage({ show: true, type, text });
-    setTimeout(() => setUiMessage((p) => ({ ...p, show: false })), 2600);
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    timerRef.current = setTimeout(() => {
+      setUiMessage((p) => ({ ...p, show: false }));
+    }, 2600);
   };
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const handleChange = (e) => {
-    setFormData({
-      ...FormData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    //Validación mínima
-    if (!FormData.username || !FormData.email || !FormData.password) {
+    if (!formData.username || !formData.email || !formData.password) {
       showMessage("warning", "Completá todos los campos para registrarte.");
       return;
     }
 
     try {
-      const res = await axios.post(
-        "http://localhost:4000/users/register",
-        FormData
-      );
+      const res = await axios.post("http://localhost:4000/users/register", formData);
 
       saveToken(res.data.token);
 
       showMessage("success", "Cuenta creada correctamente. Ya podés iniciar sesión ✨");
 
-      // mini delay para que se vea
       setTimeout(() => {
         navigate("/login");
       }, 900);
@@ -104,7 +110,6 @@ const RegisterPage = () => {
           p-8 md:p-12
         "
       >
-        {/* ✅ Mini alerta */}
         {uiMessage.show && (
           <div
             className={`
@@ -141,9 +146,14 @@ const RegisterPage = () => {
               focus-within:bg-white/10
             "
           >
-            <img src={User} alt="userIcon" className="w-6 h-6 mr-4 opacity-80" />
+            <img
+              src={User}
+              alt="userIcon"
+              className="w-6 h-6 mr-4 opacity-80"
+            />
             <input
               onChange={handleChange}
+              value={formData.username}
               type="text"
               name="username"
               placeholder="Nombre de usuario"
@@ -166,9 +176,14 @@ const RegisterPage = () => {
               focus-within:bg-white/10
             "
           >
-            <img src={Mail} alt="emailIcon" className="w-6 h-6 mr-4 opacity-80" />
+            <img
+              src={Mail}
+              alt="emailIcon"
+              className="w-6 h-6 mr-4 opacity-80"
+            />
             <input
               onChange={handleChange}
+              value={formData.email}
               type="email"
               name="email"
               placeholder="Correo electrónico"
@@ -198,6 +213,7 @@ const RegisterPage = () => {
             />
             <input
               onChange={handleChange}
+              value={formData.password}
               type="password"
               name="password"
               placeholder="Contraseña"

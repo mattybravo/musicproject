@@ -10,7 +10,6 @@ const Footer = () => {
     <div className="pt-px bg-mp-grad-full">
       <footer className="bg-mpDeep">
         <div className="max-w-7xl mx-auto px-6 py-8">
-          {/* Brand */}
           <div
             className="flex justify-center items-center gap-2 mb-5 cursor-pointer select-none"
             onClick={() => navigate("/")}
@@ -25,7 +24,6 @@ const Footer = () => {
             </h3>
           </div>
 
-          {/* Links */}
           <nav className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm mb-6">
             <button
               onClick={() => navigate("/explorar")}
@@ -56,7 +54,6 @@ const Footer = () => {
             </button>
           </nav>
 
-          {/* Copyright */}
           <p className="text-center text-xs font-mont text-white/35">
             © {year} MusicProject — Todos los derechos reservados
           </p>
